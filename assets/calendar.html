@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en" style='height: 100vh;'>  
+	<head>  
+		<meta charset="utf-8">  
+		<title>Dental Information System | Calendar</title>  
+		<link href='http://fullcalendar.io/js/fullcalendar-3.3.1/fullcalendar.min.css' rel='stylesheet' />
+		<link href='http://fullcalendar.io/js/fullcalendar-3.3.1/fullcalendar.print.min.css' rel='stylesheet' media='print' />
+		<script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+		<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>		  
+		<script src='http://fullcalendar.io/js/fullcalendar-3.3.1/lib/moment.min.js'></script>
+		<script src='http://fullcalendar.io/js/fullcalendar-3.3.1/fullcalendar.min.js'></script>
+		<style>
+			@import url('https://fonts.googleapis.com/css?family=Ubuntu');
+			body {
+				margin: 40px 10px;
+				padding: 0;
+				font-family: 'Ubuntu', sans-serif;
+				font-size: 14px;
+			}
+			#calendar {
+				max-width: 1200px;
+				margin: 0 autloadCalendaro;
+			}
+		</style>
+		<script>
+			//TODO Remove
+			future = new Date();
+			future.setDate(future.getDate() + 7);
+			futureEnd = new Date();
+			futureEnd.setDate(future.getDate() + 1);
+			mockAppt = {
+				"ID": 0,
+				"UsrName": "Billy",
+				"HygName": "Beth",
+				"DentName": "Bob",
+				"DentReq": true,
+				"Start": future,
+				"End": futureEnd			
+			}
+				
+			function loadCalendar() {		
+				$('#calendar').fullCalendar({
+					header: {
+						left: 'prev,next today',
+						center: 'title',
+						right: 'month,agendaWeek,agendaDay,listWeek'
+					},
+					defaultDate: new Date(),
+					navLinks: true, // can click day/week names to navigate views
+					editable: true,
+					eventLimit: true, // allow "more" link when too many events
+					events: loadAppts,
+					selectable: true,
+					selectHelper: true,
+					select: handleSelect
+				});		
+			}
+
+			function loadAppts(start, end, timezone, calendarCallback) {
+				start = new Date(start);
+				end = new Date(end);				
+				$.ajax({ 
+					url: window.location.protocol + "//" + window.location.host + "/api/appts?startDate=" + start.getTime() + "&endDate=" + end.getTime(),
+					success: function(appts, textStatus, jqXHR){			
+						if(appts == null) {
+							return;
+						}
+						var events = [];
+						for(i in appts) {
+							events.push(eventFromAppt(appts[i]));
+						}
+						calendarCallback(events);
+					},
+					error: function(jqXHR, textStatus, errorThrown) {
+						alert("Could not get appointments from server\nDetails: " + errorThrown)
+						//TODO Remove
+						var events = [];
+						events.push(eventFromAppt(mockAppt));
+						alert("Adding: " + events[0]);
+						calendarCallback(events);
+					},
+					dataType: "json", timeout: 6000, async: true
+				});
+			}
+
+			function eventFromAppt(appt) {
+				var event = new Object();
+				event.id = appt.ID;
+				if(!appt.ReqDentist) {
+					event.title = "Cleaning for: " + appt.CustName + ", with: " + appt.HygName;				
+				} else {
+					event.title = "Checkup for: " + appt.CustName + ", with: " + appt.DentName;
+				}
+				event.start = new Date(appt.Start);
+				event.end = new Date(appt.End);
+				event.allDay = false;
+				event.appt = appt;
+				return event;
+			}
+			
+			function handleSelect(start, end) {
+				var title = prompt('Event Title:');
+				var eventData;
+				if (title) {
+					eventData = {
+						title: title,
+						start: start,
+						end: end
+					};
+					$('#calendar').fullCalendar('renderEvent', eventData, true); // stick? = true
+				}
+				$('#calendar').fullCalendar('unselect');
+			}	
+
+			$(document).ready(loadCalendar);
+			
+			$( function() { $( "#dialog" ).dialog(); } );				
+		</script>
+	</head>
+	<body>
+		<div id='calendar'></div>
+	</body>  
+</html>  
+
